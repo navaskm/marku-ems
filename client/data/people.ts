@@ -45,7 +45,7 @@ function person(
 
 const people: PersonSeed[] = [
   person("Saleeth", "owner@marku.demo", "manager", "Owner, MarkU", "marku-management", null, "+91 98765 43210", 166, 0),
-  person("Vithin", "manager@marku.demo", "manager", "HR Manager", "marku-hr", "marku-saleeth", "+91 98765 43211", 196, 1),
+  person("Vithin", "vithin@marku.demo", "employee", "HR Manager", "marku-hr", "marku-saleeth", "+91 98765 43211", 196, 1),
   person("Mubashira", "mubashira@marku.demo", "employee", "Sales Executive", "marku-sales", "marku-vithin", "+91 98765 43212", 242, 2),
   person("Angel", "angel@marku.demo", "employee", "Sales Executive", "marku-sales", "marku-vithin", "+91 98765 43213", 312, 3),
   person("Shafi", "shafi@marku.demo", "employee", "Digital Marketing Executive", "marku-digital-marketing", "marku-vithin", "+91 98765 43214", 28, 4),
@@ -69,18 +69,4 @@ export const employees: Employee[] = people.map((person) => ({
   userId: `user-${person.id}`,
   status: "active",
   password: person.firstName.toLowerCase() || "marku123",
-}));
-
-export const DEMO_ACCOUNTS = [
-  ["owner@marku.demo", "+91 98765 43210", "Saleeth", "manager"],
-  ["manager@marku.demo", "+91 98765 43211", "Vithin", "manager"],
-  ["mubashira@marku.demo", "+91 98765 43212", "Mubashira", "employee"],
-  ["rinshad@marku.demo", "+91 98765 43215", "Rinshad", "employee"],
-].map(([email, phone, name, role]) => ({
-  company: "MarkU — The Life Design Academy",
-  code: "MARKU",
-  role: role as "manager" | "employee",
-  email,
-  phone,
-  name,
 }));

@@ -97,7 +97,7 @@ function buildLeaveRequests(staff: Employee[], managers: Employee[]): LeaveReque
 
   const byCompany = new Map<string, Employee[]>();
   for (const employee of staff) {
-    if (employee.email.startsWith("manager@") || employee.email.startsWith("owner@")) continue;
+    if (employee.email.startsWith("owner@")) continue;
     const list = byCompany.get(employee.companyId) ?? [];
     list.push(employee);
     byCompany.set(employee.companyId, list);
@@ -120,78 +120,8 @@ function buildLeaveRequests(staff: Employee[], managers: Employee[]): LeaveReque
   return requests;
 }
 
-function approvedLeaveDates(requests: LeaveRequest[], employeeId: string): Set<string> {
-  const dates = new Set<string>();
-  for (const request of requests) {
-    if (request.employeeId !== employeeId || request.status !== "approved") continue;
-    for (const date of eachDate(request.startDate, request.endDate)) {
-      dates.add(date);
-    }
-  }
-  return dates;
-}
-
-function pickStatus(random: () => number, onLeave: boolean, date: string, isToday: boolean, demoEmployee: boolean): AttendanceStatus {
-  if (HOLIDAYS.has(date) || isWeekend(new Date(`${date}T00:00:00`))) return "holiday";
-  if (onLeave) return "leave";
-  if (isToday && demoEmployee) return "absent";
-  const roll = random();
-  if (roll < 0.07) return "absent";
-  if (roll < 0.16) return "late";
-  return "present";
-}
-
-function buildAttendance(staff: Employee[], requests: LeaveRequest[]): AttendanceRecord[] {
-  const { start, end } = attendanceWindow();
-  const today = todayISO();
-  const records: AttendanceRecord[] = [];
-
-  for (const employee of staff) {
-    const random = seededRandom(`att-${employee.id}`);
-    const leaveDates = approvedLeaveDates(requests, employee.id);
-    const demoEmployee = employee.email.startsWith("employee@");
-
-    for (const date of eachDate(start, end)) {
-      const day = new Date(`${date}T00:00:00`);
-      const weekend = isWeekend(day);
-      const onLeave = leaveDates.has(date) && !weekend;
-      const status = pickStatus(random, onLeave, date, date === today, demoEmployee);
-
-      let checkIn: string | null = null;
-      let checkOut: string | null = null;
-      let workingMinutes = 0;
-
-      if (status === "present" || status === "late") {
-        const lateBias = status === "late" ? 20 + Math.floor(random() * 25) : Math.floor(random() * 12);
-        const inHour = 8;
-        const inMinute = 48 + lateBias;
-        const normalizedHour = inHour + Math.floor(inMinute / 60);
-        const normalizedMinute = inMinute % 60;
-        checkIn = `${String(normalizedHour).padStart(2, "0")}:${String(normalizedMinute).padStart(2, "0")}`;
-        if (date !== today) {
-          const outMinute = 17 * 60 + 45 + Math.floor(random() * 40);
-          checkOut = `${String(Math.floor(outMinute / 60)).padStart(2, "0")}:${String(outMinute % 60).padStart(2, "0")}`;
-          workingMinutes = minutesBetween(checkIn, checkOut);
-        } else if (!demoEmployee) {
-          checkOut = null;
-          workingMinutes = 0;
-        }
-      }
-
-      records.push({
-        id: `att-${employee.id}-${date}`,
-        companyId: employee.companyId,
-        employeeId: employee.id,
-        date,
-        status: date === today && demoEmployee ? "absent" : status,
-        checkIn: date === today && demoEmployee ? null : checkIn,
-        checkOut: date === today && demoEmployee ? null : checkOut,
-        workingMinutes: date === today && demoEmployee ? 0 : workingMinutes,
-      });
-    }
-  }
-
-  return records;
+function buildAttendance(): AttendanceRecord[] {
+  return [];
 }
 
 function buildAnnouncements(): Announcement[] {
@@ -264,9 +194,9 @@ function buildAnnouncements(): Announcement[] {
 }
 
 export function createInitialDataset(): DemoDataset {
-  const managers = employees.filter((employee) => employee.email.startsWith("manager@") || employee.email.startsWith("owner@"));
+  const managers = employees.filter((employee) => employee.email.startsWith("owner@"));
   const leaveRequests = buildLeaveRequests(employees, managers);
-  const attendance = buildAttendance(employees, leaveRequests);
+  const attendance = buildAttendance();
   const announcements = buildAnnouncements();
   const today = todayISO();
   const { start } = monthRange(new Date().getFullYear(), new Date().getMonth());
@@ -283,7 +213,7 @@ export function createInitialDataset(): DemoDataset {
     leaveRequests,
     announcements,
     activities: employees.flatMap((employee) => {
-      if (!employee.email.startsWith("manager@")) return [];
+      if (!employee.email.startsWith("owner@")) return [];
       return [
         {
           id: `act-${employee.companyId}-1`,

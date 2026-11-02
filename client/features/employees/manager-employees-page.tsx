@@ -25,7 +25,7 @@ export function ManagerEmployeesPage() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Employee | null>(null);
 
-  const staff = employees.filter((employee) => !employee.email.startsWith("manager@") && !employee.email.startsWith("owner@"));
+  const staff = employees.filter((employee) => !employee.email.startsWith("owner@"));
   const titles = [...new Set(staff.map((employee) => employee.jobTitle))];
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();

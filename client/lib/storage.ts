@@ -39,7 +39,9 @@ export function loadSession(): Session | null {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as Session;
+    const session = JSON.parse(raw) as Session;
+    if (session.email === "manager@marku.demo") return null;
+    return session;
   } catch {
     return null;
   }

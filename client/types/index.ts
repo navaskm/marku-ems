@@ -171,4 +171,4 @@ export interface ProfileUpdate {
   phone: string;
 }
 
-export const DATASET_VERSION = 2;
+export const DATASET_VERSION = 3;

@@ -1,35 +1,23 @@
 "use client";
 
-import { DEMO_ACCOUNTS as BASE_DEMO_ACCOUNTS } from "@/data/people";
 import { useDemo } from "@/features/auth/demo-context";
-import { cn } from "@/lib/cn";
-import { ArrowRight, Check, Eye, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-const DEMO_ACCOUNTS = BASE_DEMO_ACCOUNTS;
-
 export function LoginForm() {
   const { login } = useDemo();
   const router = useRouter();
-  const [email, setEmail] = useState("owner@marku.demo");
-  const [phone, setPhone] = useState("+91 98765 43210");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
-
-  const applyAccount = (nextEmail: string, nextPhone: string) => {
-    setEmail(nextEmail);
-    setPhone(nextPhone);
-    setPassword("");
-    setError(null);
-    setFieldErrors({});
-  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -111,40 +99,6 @@ export function LoginForm() {
               <p className="mt-3 max-w-md text-sm leading-6 text-slate-500 sm:text-base">
                 Access your people, attendance, and team updates from one place.
               </p>
-            </div>
-
-            <div className="mb-7 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 sm:p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Try a demo account</p>
-                  <p className="mt-0.5 text-xs text-slate-500">Choose a workspace to prefill the form.</p>
-                </div>
-                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-600 shadow-sm">Demo</span>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => applyAccount(account.email, account.phone)}
-                    className={cn(
-                      "group rounded-xl border bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm",
-                      email === account.email ? "border-indigo-400 ring-2 ring-indigo-100" : "border-indigo-100",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-medium text-slate-500">{account.company}</p>
-                        <p className="mt-1 text-sm font-semibold capitalize text-slate-900">{account.role}</p>
-                      </div>
-                      <span className={cn("flex h-5 w-5 items-center justify-center rounded-full", email === account.email ? "bg-indigo-600 text-white" : "bg-slate-100 text-transparent group-hover:bg-indigo-50")}>
-                        <Check className="h-3 w-3" />
-                      </span>
-                    </div>
-                    <p className="mt-2 truncate text-xs text-slate-500">{account.email}</p>
-                  </button>
-                ))}
-              </div>
             </div>
 
             <form className="space-y-5" onSubmit={submit}>

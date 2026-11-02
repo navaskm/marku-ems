@@ -39,7 +39,7 @@ import {
 import Link from "next/link";
 
 function companyEmployees(employees: Employee[]) {
-  return employees.filter((employee) => !employee.email.startsWith("manager@") && !employee.email.startsWith("owner@"));
+  return employees.filter((employee) => !employee.email.startsWith("owner@"));
 }
 
 function employeeFromSlug(employees: Employee[], slug: string) {
@@ -180,7 +180,7 @@ export function ManagerSettingsPage() {
   const { company, employees } = useCompanyData();
   if (!company) return null;
   const totalEmployees = employees.filter(
-    (employee) => employee.status === "active" && !employee.email.startsWith("manager@"),
+    (employee) => employee.status === "active" && !employee.email.startsWith("owner@"),
   ).length;
 
   return (

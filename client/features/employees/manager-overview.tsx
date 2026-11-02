@@ -14,7 +14,7 @@ import Link from "next/link";
 export function ManagerOverview() {
   const { employees, departments, attendance, leaveRequests, activities } = useCompanyData();
   const today = todayISO();
-    const active = employees.filter((employee) => employee.status === "active" && !employee.email.startsWith("manager@") && !employee.email.startsWith("owner@"));
+  const active = employees.filter((employee) => employee.status === "active" && !employee.email.startsWith("owner@"));
   const todayRecords = attendance.filter((record) => record.date === today && active.some((employee) => employee.id === record.employeeId));
   const present = todayRecords.filter((record) => record.status === "present" || record.status === "late").length;
   const absent = todayRecords.filter((record) => record.status === "absent").length;
