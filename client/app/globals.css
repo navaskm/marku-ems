@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #17b7a5;
+  --color-primary-hover: #0e8f84;
+  --color-brand-light: #e8f7f5;
+  --color-brand-text: #4f5053;
+  --color-page: #f7f9f9;
+  --color-surface: #ffffff;
+  --color-border: #e3e8e7;
+  --color-muted: #73777a;
+  --color-brand-soft: #d8f1ed;
+  --color-brand-muted: #b7dfd9;
+}
+
+:root {
+  color-scheme: light;
+  --color-primary: #17b7a5;
+  --color-primary-hover: #0e8f84;
+  --color-text: #4f5053;
+  --color-background: #f7f9f9;
+  --color-surface: #ffffff;
+  --color-border: #e3e8e7;
+  --color-accent: #e8f7f5;
+  --color-brand-soft: #d8f1ed;
+  --color-brand-muted: #b7dfd9;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Brand aliases keep legacy utility usage consistent across existing screens. */
+.bg-indigo-600, .bg-indigo-500 { background-color: var(--color-primary) !important; }
+.bg-indigo-700, [class~="hover:bg-indigo-700"]:hover { background-color: var(--color-primary-hover) !important; }
+.bg-indigo-50, [class~="bg-indigo-50/70"] { background-color: var(--color-accent) !important; }
+.text-indigo-600, .text-indigo-700, .text-indigo-300, .text-indigo-200 { color: var(--color-primary-hover) !important; }
+.border-indigo-100, .border-indigo-200, .border-indigo-300, .border-indigo-400 { border-color: var(--color-primary) !important; }
+.ring-indigo-100 { --tw-ring-color: color-mix(in srgb, var(--color-primary) 18%, transparent) !important; }
+[class~="focus:border-indigo-500"]:focus { border-color: var(--color-primary) !important; }
+[class~="focus:ring-indigo-100"]:focus { --tw-ring-color: color-mix(in srgb, var(--color-primary) 18%, transparent) !important; }
+[class~="hover:border-indigo-300"]:hover { border-color: var(--color-primary) !important; }
+[class~="hover:text-indigo-600"]:hover { color: var(--color-primary-hover) !important; }
+
+.bg-slate-50, .bg-slate-100 { background-color: var(--color-page) !important; }
+.bg-slate-200 { background-color: var(--color-brand-soft) !important; }
+.bg-slate-950 { background-color: var(--color-text) !important; }
+.text-slate-950, .text-slate-900, .text-slate-800, .text-slate-700 { color: var(--color-text) !important; }
+.text-slate-600, .text-slate-500, .text-slate-400 { color: var(--color-muted) !important; }
+.border-slate-200, .border-slate-100 { border-color: var(--color-border) !important; }
+[class~="hover:bg-slate-50"]:hover, [class~="hover:bg-slate-100"]:hover { background-color: var(--color-page) !important; }
+[class~="hover:text-slate-900"]:hover, [class~="hover:text-slate-800"]:hover, [class~="hover:text-slate-700"]:hover { color: var(--color-text) !important; }
+
+.bg-emerald-50, .bg-emerald-100 { background-color: var(--color-brand-light) !important; }
+.text-emerald-700, .text-emerald-800 { color: #0e8f84 !important; }
+.bg-emerald-500 { background-color: #17b7a5 !important; }
+.bg-sky-50, .bg-sky-100 { background-color: var(--color-brand-soft) !important; }
+.text-sky-700, .text-sky-800 { color: #0e8f84 !important; }
+.bg-sky-500 { background-color: #5c9f98 !important; }
+.bg-amber-50, .bg-amber-100, .bg-rose-50, .bg-rose-100 { background-color: var(--color-brand-soft) !important; }
+.text-amber-700, .text-amber-800, .text-rose-600, .text-rose-700, .text-rose-800 { color: var(--color-primary-hover) !important; }
+.bg-amber-400, .bg-amber-500, .bg-rose-400, .bg-rose-500, .bg-rose-600 { background-color: var(--color-primary-hover) !important; }
+[class~="border-rose-100"], [class~="border-emerald-100"] { border-color: var(--color-brand-soft) !important; }
+[class~="hover:bg-[#d8f1ed]"]:hover { background-color: var(--color-brand-soft) !important; }
+[class~="bg-[#eef7f6]"] { background-color: var(--color-brand-soft) !important; }
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
