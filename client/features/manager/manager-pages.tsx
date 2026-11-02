@@ -65,19 +65,26 @@ export function ManagerEmployeeDetailPage() {
       <div className="min-w-0 space-y-6">
         <Card>
           <CardBody className="flex flex-col items-center text-center">
-            <Avatar employee={employee} size="xl" />
 
-            <h2 className="mt-4 text-lg font-semibold text-slate-900">
-              {fullName(employee)}
-            </h2>
+            <div className="flex w-full flex-row items-center gap-4">
+              <Avatar employee={employee} size="xl" />
 
-            <p className="text-sm text-slate-500">{employee.jobTitle}</p>
+              <div className="min-w-0 flex flex-col items-start gap-1">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  {fullName(employee)}
+                </h2>
 
-            <div className="mt-3">
-              <StatusBadge status={employee.status} />
+                <p className="text-sm text-slate-500">
+                  {employee.jobTitle}
+                </p>
+
+                <div className="mt-1">
+                  <StatusBadge status={employee.status} />
+                </div>
+              </div>
             </div>
 
-            <div className="mt-6 grid w-full grid-cols-1 gap-4 border-t border-slate-100 pt-5 text-left text-sm sm:grid-cols-2">
+            <div className="mt-6 grid w-full gap-4 border-t border-slate-100 pt-5 text-left text-sm grid-cols-2">
               <Detail label="Email" value={employee.email} />
 
               <Detail label="Phone" value={employee.phone} />
@@ -119,7 +126,7 @@ export function ManagerAttendancePage() {
   const filtered = records.filter((record) => departmentId === "all" || departments.find((department) => department.id === employeeFor(record, staff)?.departmentId)?.id === departmentId);
   const present = filtered.filter((record) => record.status === "present" || record.status === "late").length;
   return <div><PageHeader title="Attendance" description={`Team attendance for ${formatDate(today)}.`} actions={<Select className="w-48" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="all">All departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</Select>} />
-  <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4"><StatCard label="Present" value={present} hint={`${filtered.length ? Math.round((present / filtered.length) * 100) : 0}% of team`} icon={Check} tone="green" /><StatCard label="Late" value={filtered.filter((record) => record.status === "late").length} icon={Clock3} tone="amber" /><StatCard label="Absent or leave" value={filtered.filter((record) => record.status === "absent" || record.status === "leave").length} icon={X} tone="rose" />
+    <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4"><StatCard label="Present" value={present} hint={`${filtered.length ? Math.round((present / filtered.length) * 100) : 0}% of team`} icon={Check} tone="green" /><StatCard label="Late" value={filtered.filter((record) => record.status === "late").length} icon={Clock3} tone="amber" /><StatCard label="Absent or leave" value={filtered.filter((record) => record.status === "absent" || record.status === "leave").length} icon={X} tone="rose" />
     </div>
     <Card><CardHeader title="Today’s attendance" /><CardBody className="px-0 py-0"><AttendanceTeamTable records={filtered} employees={staff} departments={departments} /></CardBody></Card></div>;
 }
