@@ -58,10 +58,13 @@ def check_phone_match(req_phone, profile_phone):
     digits_prof = re.sub(r"\D", "", str(profile_phone or ""))
     if not digits_req:
         return True
+    if digits_req == digits_prof:
+        return True
+    if len(digits_req) >= 10 and len(digits_prof) >= 10 and digits_req[-10:] == digits_prof[-10:]:
+        return True
     return (
-        digits_req == digits_prof
-        or (len(digits_req) == 10 and digits_prof == "1" + digits_req)
-        or (len(digits_prof) == 10 and digits_req == "1" + digits_prof)
+        (len(digits_req) == 10 and digits_prof in ("91" + digits_req, "1" + digits_req))
+        or (len(digits_prof) == 10 and digits_req in ("91" + digits_prof, "1" + digits_prof))
     )
 
 

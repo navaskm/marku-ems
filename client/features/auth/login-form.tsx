@@ -24,13 +24,16 @@ export function LoginForm() {
     const nextErrors: Record<string, string> = {};
     if (!email.trim()) nextErrors.email = "Email is required.";
     else if (!email.includes("@")) nextErrors.email = "Enter a valid email address.";
+    const rawDigits = phone.replace(/\D/g, "");
     if (!phone.trim()) nextErrors.phone = "Phone number is required.";
+    else if (rawDigits.length !== 10 && rawDigits.length !== 12) nextErrors.phone = "Enter a valid 10-digit mobile number.";
     if (!password) nextErrors.password = "Password is required.";
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     setPending(true);
-    const result = await login({ email, phone, password });
+    const submissionPhone = rawDigits.length >= 10 ? `+91 ${rawDigits.slice(-10)}` : phone.trim();
+    const result = await login({ email, phone: submissionPhone, password });
     setPending(false);
     if (!result.ok) {
       setError(result.error);
@@ -106,7 +109,27 @@ export function LoginForm() {
                 <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.demo" className="h-12 rounded-xl px-4" />
               </Field>
               <Field label="Phone number" error={fieldErrors.phone}>
-                <Input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+91 98765 00000" className="h-12 rounded-xl px-4" />
+                <div className="relative flex items-center">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-sm font-semibold text-slate-600">
+                    <span>+91</span>
+                    <span className="ml-2.5 h-4 w-px bg-slate-300" />
+                  </div>
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={(event) => {
+                      let val = event.target.value.replace(/[^\d\s]/g, "");
+                      const digits = val.replace(/\D/g, "");
+                      if (digits.startsWith("91") && digits.length > 10) {
+                        val = digits.slice(2);
+                      }
+                      setPhone(val);
+                    }}
+                    placeholder="98765 43210"
+                    maxLength={11}
+                    className="h-12 rounded-xl pl-16 pr-4"
+                  />
+                </div>
               </Field>
               <Field label="Password" error={fieldErrors.password}>
                 <div className="relative">
