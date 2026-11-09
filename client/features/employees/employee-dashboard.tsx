@@ -85,24 +85,30 @@ export function EmployeeDashboard() {
             <Button
               size="sm"
               variant="outline"
+              className="shrink-0 whitespace-nowrap px-2 sm:px-3"
               onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, -1))}
             >
-              Previous month
+              <span className="hidden sm:inline">Previous month</span>
+              <span className="sm:hidden">Prev</span>
             </Button>
-            <span className="text-xs font-semibold text-slate-700 min-w-28 text-center">
+
+            <span className="min-w-0 flex-1 text-center text-xs font-semibold text-slate-700 whitespace-nowrap">
               {monthLabel}
             </span>
+
             <Button
               size="sm"
               variant="outline"
+              className="shrink-0 whitespace-nowrap px-2 sm:px-3"
               onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, 1))}
             >
-              Next month
+              <span className="hidden sm:inline">Next month</span>
+              <span className="sm:hidden">Next</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Today"
             value={todayRecord ? todayRecord.status : "Not marked"}
