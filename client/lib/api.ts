@@ -65,6 +65,7 @@ function normalizeEmployee(employee: Record<string, unknown>): Employee {
     departmentId: String(employee.departmentId), jobTitle: String(employee.jobTitle), managerId: employee.managerId == null ? null : String(employee.managerId),
     joiningDate: String(employee.joiningDate), status: employee.status as Employee["status"], avatarHue: Number(employee.avatarHue),
     password: employee.password ? String(employee.password) : undefined,
+    salary: Number(employee.salary ?? 0),
   };
 }
 
@@ -77,4 +78,18 @@ export async function apiUpdateEmployee(id: string, input: EmployeeInput) {
 export async function apiUpdateEmployeeStatus(id: string, status: Employee["status"]) {
   return normalizeEmployee(await request<Record<string, unknown>>(`/employees/${id}/`, { method: "PATCH", body: JSON.stringify({ status }) }));
 }
+export async function apiUpdateEmployeeSalary(id: string, salary: number) {
+  return normalizeEmployee(await request<Record<string, unknown>>(`/employees/${id}/`, { method: "PATCH", body: JSON.stringify({ salary }) }));
+}
 export function apiDeleteEmployee(id: string) { return request<void>(`/employees/${id}/`, { method: "DELETE" }); }
+
+export async function apiCreateHoliday(input: { name: string; date: string }) {
+  return request<{ id: string; companyId: string; name: string; date: string }>("/holidays/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteHoliday(id: string) {
+  return request<void>(`/holidays/${id}/`, { method: "DELETE" });
+}

@@ -9,17 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { useCompanyData } from "@/features/auth/demo-context";
-import { addMonths, formatDate, formatMinutes, formatTime, monthRange } from "@/lib/dates";
+import { addMonths, calculateMonthStats, formatDate, formatMinutes, formatTime, monthRange } from "@/lib/dates";
 import type { AttendanceRecord } from "@/types";
-import { CalendarDays, Clock3, Timer } from "lucide-react";
+import { Calendar, CalendarDays, CalendarX2, Clock3, PartyPopper } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export function EmployeeAttendancePage() {
-  const { currentEmployee, attendance } = useCompanyData();
+  const { currentEmployee, attendance, leaveRequests, holidays } = useCompanyData();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), monthIndex: now.getMonth() });
   const { start, end } = monthRange(cursor.year, cursor.monthIndex);
   const employeeId = currentEmployee?.id;
+
   const monthRecords = useMemo(
     () =>
       attendance.filter(
@@ -28,11 +29,18 @@ export function EmployeeAttendancePage() {
       ),
     [attendance, employeeId, end, start],
   );
+
   if (!currentEmployee) return null;
 
-  const present = monthRecords.filter((record) => record.status === "present" || record.status === "late").length;
-  const hours = monthRecords.reduce((sum, record) => sum + record.workingMinutes, 0);
-  const late = monthRecords.filter((record) => record.status === "late").length;
+  const stats = calculateMonthStats({
+    employeeId: currentEmployee.id,
+    companyId: currentEmployee.companyId,
+    year: cursor.year,
+    monthIndex: cursor.monthIndex,
+    attendance,
+    leaveRequests,
+    holidays,
+  });
 
   const columns: Column<AttendanceRecord>[] = [
     { key: "date", header: "Date", sortable: true, sortValue: (row) => row.date, render: (row) => formatDate(row.date) },
@@ -42,13 +50,13 @@ export function EmployeeAttendancePage() {
     { key: "hours", header: "Working hours", sortable: true, sortValue: (row) => row.workingMinutes, render: (row) => formatMinutes(row.workingMinutes) },
   ];
 
-  const monthOptions = [-1, 0, 1].map((delta) => addMonths(now.getFullYear(), now.getMonth(), delta));
+  const monthOptions = [-2, -1, 0, 1].map((delta) => addMonths(now.getFullYear(), now.getMonth(), delta));
 
   return (
     <div>
       <PageHeader
         title="My attendance"
-        description="Calendar and history for your company workspace only."
+        description="Calendar, holidays, and attendance history for your company workspace."
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setCursor((value) => addMonths(value.year, value.monthIndex, -1))}>
@@ -75,16 +83,42 @@ export function EmployeeAttendancePage() {
           ))}
         </Select>
       </div>
-      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
-        <StatCard label="Days present" value={present} icon={CalendarDays} tone="green" />
-        <StatCard label="Late arrivals" value={late} icon={Timer} tone="amber" />
-        <StatCard label="Total hours" value={formatMinutes(hours)} icon={Clock3} />
+
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-5">
+        <StatCard label="Days present" value={`${stats.attendanceDays} days`} icon={CalendarDays} tone="green" />
+        <StatCard
+          label="LOP days"
+          value={`${stats.lopDays} days`}
+          hint="Leave / Loss of Pay (excl. Sundays)"
+          icon={CalendarX2}
+          tone={stats.lopDays > 0 ? "rose" : undefined}
+        />
+        <StatCard
+          label="Sundays"
+          value={`${stats.sundaysCount} days`}
+          hint="Weekend off-days this month"
+          icon={Calendar}
+          tone="sky"
+        />
+        <StatCard
+          label="Holidays"
+          value={`${stats.holidaysCount} days`}
+          hint="Company holidays (excl. from LOP)"
+          icon={PartyPopper}
+          tone="amber"
+        />
+        <StatCard label="Total hours" value={formatMinutes(stats.workedMinutes)} icon={Clock3} />
       </div>
-      
+
       <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
         <Card>
           <CardBody>
-            <AttendanceCalendar year={cursor.year} monthIndex={cursor.monthIndex} records={monthRecords} />
+            <AttendanceCalendar
+              year={cursor.year}
+              monthIndex={cursor.monthIndex}
+              records={monthRecords}
+              holidays={holidays}
+            />
           </CardBody>
         </Card>
         <Card>

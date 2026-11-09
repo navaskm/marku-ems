@@ -33,6 +33,15 @@ class Employee(models.Model):
     avatar_hue = models.PositiveSmallIntegerField(default=220)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="employee")
     plain_password = models.CharField(max_length=128, blank=True, default="")
+    salary = models.PositiveIntegerField(default=0)
+
+class Holiday(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="holidays")
+    name = models.CharField(max_length=120)
+    date = models.DateField()
+
+    class Meta:
+        ordering = ["date"]
 
 class Attendance(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="attendance")

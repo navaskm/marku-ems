@@ -1,4 +1,4 @@
-import { companies, companySettings, departments } from "@/data/companies";
+import { MARKU_ID, companies, companySettings, departments } from "@/data/companies";
 import { employees, users } from "@/data/people";
 import { eachDate, isWeekend, minutesBetween, monthRange, todayISO, toISODate } from "@/lib/dates";
 import { seededRandom } from "@/lib/ids";
@@ -10,6 +10,7 @@ import {
   type AttendanceStatus,
   type DemoDataset,
   type Employee,
+  type Holiday,
   type LeaveBalance,
   type LeaveRequest,
 } from "@/types";
@@ -193,11 +194,23 @@ function buildAnnouncements(): Announcement[] {
   ];
 }
 
+function buildHolidays(): Holiday[] {
+  return [
+    { id: "hol-1", companyId: MARKU_ID, name: "Christmas", date: "2026-12-25" },
+    { id: "hol-2", companyId: MARKU_ID, name: "New Year's Day", date: "2026-01-01" },
+    { id: "hol-3", companyId: MARKU_ID, name: "Republic Day", date: "2026-01-26" },
+    { id: "hol-4", companyId: MARKU_ID, name: "Independence Day", date: "2026-08-15" },
+    { id: "hol-5", companyId: MARKU_ID, name: "Gandhi Jayanti", date: "2026-10-02" },
+    { id: "hol-6", companyId: MARKU_ID, name: "Diwali", date: "2026-11-08" },
+  ];
+}
+
 export function createInitialDataset(): DemoDataset {
   const managers = employees.filter((employee) => employee.email.startsWith("owner@"));
   const leaveRequests = buildLeaveRequests(employees, managers);
   const attendance = buildAttendance();
   const announcements = buildAnnouncements();
+  const holidays = buildHolidays();
   const today = todayISO();
   const { start } = monthRange(new Date().getFullYear(), new Date().getMonth());
 
@@ -212,6 +225,7 @@ export function createInitialDataset(): DemoDataset {
     leaveBalances: buildLeaveBalances(employees),
     leaveRequests,
     announcements,
+    holidays,
     activities: employees.flatMap((employee) => {
       if (!employee.email.startsWith("owner@")) return [];
       return [

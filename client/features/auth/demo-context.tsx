@@ -4,7 +4,18 @@ import { DATASET_VERSION } from "@/types";
 import { eachDate, isWeekend, minutesBetween, nowTime, todayISO, workingDaysBetween } from "@/lib/dates";
 import { createId } from "@/lib/ids";
 import { fullName } from "@/lib/names";
-import { apiCreateEmployee, apiDeleteEmployee, apiLogin, apiLogout, apiUpdateEmployee, apiUpdateEmployeeStatus, apiUpdateProfile } from "@/lib/api";
+import {
+  apiCreateEmployee,
+  apiCreateHoliday,
+  apiDeleteEmployee,
+  apiDeleteHoliday,
+  apiLogin,
+  apiLogout,
+  apiUpdateEmployee,
+  apiUpdateEmployeeSalary,
+  apiUpdateEmployeeStatus,
+  apiUpdateProfile,
+} from "@/lib/api";
 import type { LoginResponse } from "@/lib/api";
 import { loadDataset, loadSession, resetDataset, saveDataset, saveSession } from "@/lib/storage";
 import type {
@@ -14,6 +25,7 @@ import type {
   DemoDataset,
   DepartmentInput,
   EmployeeInput,
+  Holiday,
   LeaveInput,
   LeaveType,
   LoginInput,
@@ -54,6 +66,9 @@ interface DemoContextValue {
   addAnnouncement: (input: AnnouncementInput) => string | null;
   updateAnnouncement: (id: string, input: AnnouncementInput) => string | null;
   deleteAnnouncement: (id: string) => void;
+  updateEmployeeSalary: (id: string, salary: number) => Promise<string | null>;
+  addHoliday: (input: { name: string; date: string }) => Promise<string | null>;
+  deleteHoliday: (id: string) => Promise<string | null>;
   updateProfile: (input: ProfileUpdate) => Promise<string | null>;
   updateSettings: (input: Partial<CompanySettings>) => void;
   updateCompanyName: (name: string) => void;
@@ -71,6 +86,7 @@ const EMPTY_DATASET: DemoDataset = {
   leaveBalances: [],
   leaveRequests: [],
   announcements: [],
+  holidays: [],
   activities: [],
 };
 
@@ -171,6 +187,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           status: authenticated.employee.status === "inactive" ? "inactive" as const : "active" as const,
           avatarHue: Number(authenticated.employee.avatarHue ?? 220),
           password: input.password,
+          salary: Number(authenticated.employee.salary ?? 0),
         };
         const user = {
           id: userId,
@@ -439,6 +456,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           status: input.status,
           avatarHue: Math.floor(Math.random() * 360),
           password: (input.firstName.trim() + input.lastName.trim().replace(/[^a-zA-Z0-9]/g, "")).toLowerCase(),
+          salary: Number(input.salary ?? 0),
         };
         const next: DemoDataset = {
           ...current,
@@ -536,6 +554,124 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       if (target) void apiDeleteEmployee(target.email).catch(() => undefined);
     },
     [dataset.employees, mutate, session],
+  );
+
+  const updateEmployeeSalary = useCallback(
+    async (id: string, salary: number) => {
+      if (!session) return "Not signed in.";
+      if (session.role !== "manager") return "Only managers can update salaries.";
+      if (isNaN(salary) || salary < 0) return "Salary must be a positive number.";
+
+      const target = dataset.employees.find((item) => item.id === id);
+      if (target) {
+        try {
+          await apiUpdateEmployeeSalary(target.email, salary);
+        } catch {
+          // fallback locally if api offline
+        }
+      }
+
+      mutate((current) => ({
+        ...current,
+        employees: current.employees.map((employee) =>
+          employee.id === id && employee.companyId === session.companyId
+            ? { ...employee, salary }
+            : employee,
+        ),
+      }), "Employee salary updated.");
+
+      return null;
+    },
+    [dataset.employees, mutate, session],
+  );
+
+  const addHoliday = useCallback(
+    async (input: { name: string; date: string }) => {
+      if (!session) return "Not signed in.";
+      if (session.role !== "manager") return "Only managers can specify company holidays.";
+      if (!input.name.trim()) return "Holiday name is required.";
+      if (!input.date) return "Holiday date is required.";
+
+      const cleanName = input.name.trim();
+      const cleanDate = input.date.trim();
+
+      const existing = (dataset.holidays ?? []).find(
+        (h) => h.companyId === session.companyId && h.date === cleanDate,
+      );
+      if (existing) return `A holiday (${existing.name}) is already set for this date.`;
+
+      let serverHolidayId: string | null = null;
+      try {
+        const res = await apiCreateHoliday({ name: cleanName, date: cleanDate });
+        if (res?.id) serverHolidayId = String(res.id);
+      } catch {
+        // Local fallback
+      }
+
+      const newHoliday: Holiday = {
+        id: serverHolidayId ?? createId("hol"),
+        companyId: session.companyId,
+        name: cleanName,
+        date: cleanDate,
+      };
+
+      mutate((current) => {
+        const activeEmployees = current.employees.filter(
+          (e) => e.companyId === session.companyId && e.status === "active",
+        );
+        let attendance = [...current.attendance];
+        for (const emp of activeEmployees) {
+          const existingAtt = attendance.find((a) => a.employeeId === emp.id && a.date === cleanDate);
+          if (existingAtt) {
+            attendance = attendance.map((a) =>
+              a.id === existingAtt.id
+                ? { ...a, status: "holiday" as const, checkIn: null, checkOut: null, workingMinutes: 0 }
+                : a,
+            );
+          } else {
+            attendance.push({
+              id: createId("att"),
+              companyId: session.companyId,
+              employeeId: emp.id,
+              date: cleanDate,
+              status: "holiday" as const,
+              checkIn: null,
+              checkOut: null,
+              workingMinutes: 0,
+            });
+          }
+        }
+        return {
+          ...current,
+          holidays: [...(current.holidays ?? []), newHoliday],
+          attendance,
+        };
+      }, `Holiday added: ${cleanName}`);
+
+      return null;
+    },
+    [dataset.holidays, mutate, session],
+  );
+
+  const deleteHoliday = useCallback(
+    async (id: string) => {
+      if (!session) return "Not signed in.";
+      if (session.role !== "manager") return "Only managers can remove company holidays.";
+
+      try {
+        await apiDeleteHoliday(id);
+      } catch {
+        // Local fallback
+      }
+
+      mutate((current) => ({
+        ...current,
+        holidays: (current.holidays ?? []).filter((h) => h.id !== id),
+      }), "Holiday removed.");
+
+      return null;
+    },
+    [mutate, session],
   );
 
   const addDepartment = useCallback(
@@ -751,6 +887,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       addAnnouncement,
       updateAnnouncement,
       deleteAnnouncement,
+      updateEmployeeSalary,
+      addHoliday,
+      deleteHoliday,
       updateProfile,
       updateSettings,
       updateCompanyName,
@@ -759,6 +898,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       addAnnouncement,
       addDepartment,
       addEmployee,
+      addHoliday,
       applyLeave,
       approveLeave,
       cancelLeave,
@@ -768,6 +908,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       deleteAnnouncement,
       deleteDepartment,
       deleteEmployee,
+      deleteHoliday,
       dismissToast,
       login,
       logout,
@@ -781,6 +922,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       updateCompanyName,
       updateDepartment,
       updateEmployee,
+      updateEmployeeSalary,
       updateProfile,
       updateSettings,
     ],
@@ -810,6 +952,7 @@ export function useCompanyData() {
         leaveBalances: [],
         leaveRequests: [],
         announcements: [],
+        holidays: [],
         activities: [],
       };
     }
@@ -835,6 +978,7 @@ export function useCompanyData() {
       leaveBalances: dataset.leaveBalances.filter((item) => item.companyId === session.companyId),
       leaveRequests: dataset.leaveRequests.filter((item) => item.companyId === session.companyId),
       announcements: dataset.announcements.filter((item) => item.companyId === session.companyId),
+      holidays: (dataset.holidays ?? []).filter((item) => item.companyId === session.companyId),
       activities: dataset.activities.filter((item) => item.companyId === session.companyId),
     };
   }, [dataset, session]);

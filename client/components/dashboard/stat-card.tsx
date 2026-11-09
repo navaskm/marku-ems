@@ -7,23 +7,31 @@ export function StatCard({
   hint,
   icon: Icon,
   tone = "indigo",
+  onClick,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   icon: LucideIcon;
   tone?: "indigo" | "green" | "amber" | "rose" | "sky";
+  onClick?: () => void;
 }) {
   const tones = {
-  indigo: "bg-brand-light text-primary-hover",
-  green: "bg-brand-light text-primary-hover",
+    indigo: "bg-brand-light text-primary-hover",
+    green: "bg-brand-light text-primary-hover",
     amber: "bg-brand-soft text-primary-hover",
     rose: "bg-brand-light text-primary-hover",
-  sky: "bg-[#eef7f6] text-primary-hover",
+    sky: "bg-[#eef7f6] text-primary-hover",
   };
 
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-surface p-2 shadow-sm sm:p-4">
+    <div
+      onClick={onClick}
+      className={cn(
+        "min-w-0 rounded-lg border border-border bg-surface p-2 shadow-sm sm:p-4",
+        onClick && "cursor-pointer transition-colors hover:border-indigo-300",
+      )}
+    >
       <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 w-full">
           <div className="flex items-center justify-between gap-1 sm:block">

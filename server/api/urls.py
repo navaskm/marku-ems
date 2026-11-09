@@ -5,6 +5,7 @@ from .views import (
     DepartmentViewSet,
     EmployeePasswordInviteView,
     EmployeeViewSet,
+    HolidayViewSet,
     PasswordChangeView,
     ProfileView,
     login,
@@ -15,6 +16,7 @@ router = DefaultRouter()
 router.register("companies", CompanyViewSet, basename="company")
 router.register("departments", DepartmentViewSet, basename="department")
 router.register("employees", EmployeeViewSet, basename="employee")
+router.register("holidays", HolidayViewSet, basename="holiday")
 urlpatterns = [
     path("auth/login/", login),
     path("auth/password/setup/", set_password_from_invite),

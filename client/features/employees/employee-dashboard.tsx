@@ -6,14 +6,28 @@ import { AttendanceBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { useCompanyData, useDemo } from "@/features/auth/demo-context";
-import { formatDate, formatMinutes, formatTime, todayISO } from "@/lib/dates";
+import { addMonths, calculateMonthStats, formatDate, formatMinutes, formatSalary, formatTime, todayISO } from "@/lib/dates";
 import { fullName } from "@/lib/names";
-import { CalendarCheck, Clock3, LogIn, LogOut } from "lucide-react";
+import {
+  Calendar,
+  CalendarCheck,
+  CalendarX2,
+  Clock3,
+  IndianRupee,
+  LogIn,
+  LogOut,
+  PartyPopper,
+} from "lucide-react";
+import { useState } from "react";
 
 export function EmployeeDashboard() {
   const { checkIn, checkOut } = useDemo();
-  const { currentEmployee, departments, attendance, employees } =
+  const { currentEmployee, departments, attendance, employees, leaveRequests, holidays } =
     useCompanyData();
+
+  const now = new Date();
+  const [cursor, setCursor] = useState({ year: now.getFullYear(), monthIndex: now.getMonth() });
+
   if (!currentEmployee) return null;
 
   const today = todayISO();
@@ -24,10 +38,22 @@ export function EmployeeDashboard() {
     .filter((record) => record.employeeId === currentEmployee.id && record.date <= today)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6);
-  const monthRecords = attendance.filter(
-    (record) => record.employeeId === currentEmployee.id && record.date.startsWith(today.slice(0, 7)),
-  );
-  const worked = monthRecords.reduce((sum, record) => sum + record.workingMinutes, 0);
+
+  const stats = calculateMonthStats({
+    employeeId: currentEmployee.id,
+    companyId: currentEmployee.companyId,
+    year: cursor.year,
+    monthIndex: cursor.monthIndex,
+    attendance,
+    leaveRequests,
+    holidays,
+  });
+
+  const monthLabel = new Date(cursor.year, cursor.monthIndex, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
   const checkedIn = Boolean(todayRecord?.checkIn);
   const checkedOut = Boolean(todayRecord?.checkOut);
 
@@ -50,22 +76,96 @@ export function EmployeeDashboard() {
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Today"
-          value={todayRecord ? todayRecord.status : "Not marked"}
-          hint={todayRecord?.checkIn ? `In ${formatTime(todayRecord.checkIn)}` : "Check in to start your day"}
-          icon={CalendarCheck}
-          tone={todayRecord?.status === "present" ? "green" : todayRecord?.status === "late" ? "amber" : "sky"}
-        />
-        <StatCard label="Hours this month" value={formatMinutes(worked)} hint="Weekday working time" icon={Clock3} />
-        <StatCard
-          label="Reports to"
-          value={manager ? fullName(manager) : "Unassigned"}
-          hint={manager?.jobTitle ?? "No reporting manager"}
-          icon={CalendarCheck}
-          tone="indigo"
-        />
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-base font-semibold text-slate-900">
+            Monthly overview ({monthLabel})
+          </h3>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, -1))}
+            >
+              Previous month
+            </Button>
+            <span className="text-xs font-semibold text-slate-700 min-w-28 text-center">
+              {monthLabel}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, 1))}
+            >
+              Next month
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Today"
+            value={todayRecord ? todayRecord.status : "Not marked"}
+            hint={todayRecord?.checkIn ? `In ${formatTime(todayRecord.checkIn)}` : "Check in to start your day"}
+            icon={CalendarCheck}
+            tone={todayRecord?.status === "present" ? "green" : todayRecord?.status === "late" ? "amber" : "sky"}
+          />
+
+          <StatCard
+            label="Monthly salary"
+            value={formatSalary(currentEmployee.salary)}
+            hint="Your monthly compensation"
+            icon={IndianRupee}
+            tone="green"
+          />
+
+          <StatCard
+            label="Attendance days"
+            value={`${stats.attendanceDays} days`}
+            hint="Days present / late this month"
+            icon={CalendarCheck}
+            tone="green"
+          />
+
+          <StatCard
+            label="LOP days"
+            value={`${stats.lopDays} days`}
+            hint="Leave / Loss of Pay (excl. Sundays)"
+            icon={CalendarX2}
+            tone={stats.lopDays > 0 ? "rose" : undefined}
+          />
+
+          <StatCard
+            label="Sundays"
+            value={`${stats.sundaysCount} days`}
+            hint="Weekend off-days this month"
+            icon={Calendar}
+            tone="sky"
+          />
+
+          <StatCard
+            label="Company holidays"
+            value={`${stats.holidaysCount} days`}
+            hint="Official holidays (excl. from LOP)"
+            icon={PartyPopper}
+            tone="amber"
+          />
+
+          <StatCard
+            label="Hours this month"
+            value={formatMinutes(stats.workedMinutes)}
+            hint="Total tracked time"
+            icon={Clock3}
+          />
+
+          <StatCard
+            label="Reports to"
+            value={manager ? fullName(manager) : "Unassigned"}
+            hint={manager?.jobTitle ?? "No reporting manager"}
+            icon={CalendarCheck}
+            tone="indigo"
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">

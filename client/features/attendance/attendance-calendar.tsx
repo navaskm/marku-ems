@@ -16,21 +16,25 @@ export function AttendanceCalendar({
   year,
   monthIndex,
   records,
+  holidays,
 }: {
   year: number;
   monthIndex: number;
   records: AttendanceRecord[];
+  holidays?: Array<{ date: string; name: string }>;
 }) {
   const { start } = monthRange(year, monthIndex);
   const first = parseISODate(start);
   const startWeekday = first.getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const byDate = new Map(records.map((record) => [record.date, record]));
+  const holidayByDate = new Map((holidays ?? []).map((h) => [h.date, h.name]));
   const cells = Array.from({ length: startWeekday + daysInMonth }, (_, index) => {
     if (index < startWeekday) return null;
     const day = index - startWeekday + 1;
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return { day, date, record: byDate.get(date) };
+    const holidayName = holidayByDate.get(date);
+    return { day, date, record: byDate.get(date), holidayName };
   });
 
   return (
@@ -47,10 +51,16 @@ export function AttendanceCalendar({
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
         {cells.map((cell, index) =>
           cell ? (
-            <div key={cell.date} className="rounded-md border border-slate-100 bg-white px-0.5 py-1.5 text-center sm:rounded-lg sm:px-1 sm:py-2">
+            <div
+              key={cell.date}
+              title={cell.holidayName ? `Holiday: ${cell.holidayName}` : undefined}
+              className="rounded-md border border-slate-100 bg-white px-0.5 py-1.5 text-center sm:rounded-lg sm:px-1 sm:py-2"
+            >
               <p className="text-[10px] font-medium text-slate-700 sm:text-xs">{cell.day}</p>
               {cell.record ? (
                 <span className={cn("mx-auto mt-1 block h-2 w-2 rounded-full", colors[cell.record.status])} />
+              ) : cell.holidayName ? (
+                <span className={cn("mx-auto mt-1 block h-2 w-2 rounded-full", colors.holiday)} />
               ) : (
                 <span className="mx-auto mt-1 block h-2 w-2" />
               )}

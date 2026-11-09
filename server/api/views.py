@@ -21,8 +21,8 @@ from rest_framework.views import APIView
 import re
 import smtplib
 from urllib.parse import urlencode
-from .models import Company, Department, Employee
-from .serializers import CompanySerializer, DepartmentSerializer, EmployeeSerializer
+from .models import Company, Department, Employee, Holiday
+from .serializers import CompanySerializer, DepartmentSerializer, EmployeeSerializer, HolidaySerializer
 
 def company_for(request):
     try:
@@ -257,6 +257,19 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         require_manager(self.request)
         instance.delete()
 
+class HolidayViewSet(viewsets.ModelViewSet):
+    serializer_class = HolidaySerializer
+    def get_queryset(self): return Holiday.objects.filter(company=company_for(self.request)).order_by("date")
+    def perform_create(self, serializer):
+        require_manager(self.request)
+        serializer.save(company=company_for(self.request))
+    def perform_update(self, serializer):
+        require_manager(self.request)
+        serializer.save(company=company_for(self.request))
+    def perform_destroy(self, instance):
+        require_manager(self.request)
+        instance.delete()
+
 class EmployeeViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeSerializer
     def get_queryset(self): return Employee.objects.filter(company=company_for(self.request)).select_related("user", "department", "manager")
@@ -325,6 +338,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                     joining_date=data["joiningDate"],
                     status=data.get("status", "active"),
                     role="employee",
+                    salary=int(data.get("salary", 0)),
                 )
                 if settings.EMAIL_HOST:
                     email_password_setup_link(user)

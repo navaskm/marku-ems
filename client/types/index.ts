@@ -52,6 +52,7 @@ export interface Employee {
   status: EmployeeStatus;
   avatarHue: number;
   password?: string;
+  salary: number;
 }
 
 export interface Department {
@@ -104,6 +105,13 @@ export interface Announcement {
   publishedAt: string;
 }
 
+export interface Holiday {
+  id: string;
+  companyId: string;
+  name: string;
+  date: string;
+}
+
 export interface ActivityItem {
   id: string;
   companyId: string;
@@ -129,6 +137,7 @@ export interface DemoDataset {
   leaveBalances: LeaveBalance[];
   leaveRequests: LeaveRequest[];
   announcements: Announcement[];
+  holidays: Holiday[];
   activities: ActivityItem[];
 }
 
@@ -148,6 +157,7 @@ export interface EmployeeInput {
   managerId: string | null;
   joiningDate: string;
   status: EmployeeStatus;
+  salary?: number;
 }
 
 export interface LeaveInput {
@@ -172,4 +182,4 @@ export interface ProfileUpdate {
   phone?: string;
 }
 
-export const DATASET_VERSION = 3;
+export const DATASET_VERSION = 4;

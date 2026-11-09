@@ -10,9 +10,19 @@ export function loadDataset(): DemoDataset {
     const raw = window.localStorage.getItem(DATA_KEY);
     if (!raw) return createInitialDataset();
     const parsed = JSON.parse(raw) as DemoDataset & { users: Array<DemoDataset["users"][number] & { password?: unknown }> };
-    if (parsed.version !== DATASET_VERSION) return createInitialDataset();
+    const initial = createInitialDataset();
+    if (parsed.version !== DATASET_VERSION) return initial;
     return {
+      ...initial,
       ...parsed,
+      holidays: Array.isArray(parsed.holidays) && parsed.holidays.length > 0 ? parsed.holidays : initial.holidays,
+      employees: (parsed.employees ?? initial.employees).map((emp) => {
+        const fallback = initial.employees.find((e) => e.id === emp.id);
+        return {
+          ...emp,
+          salary: emp.salary ?? fallback?.salary ?? 30000,
+        };
+      }),
       users: parsed.users.map((user) => {
         const safeUser: User & { password?: unknown } = { ...user };
         delete safeUser.password;

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Announcement, Company, Department, Employee
+from .models import Announcement, Company, Department, Employee, Holiday
 
 class CompanySerializer(serializers.ModelSerializer):
     logoInitials = serializers.SerializerMethodField()
@@ -30,9 +30,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
     avatarHue = serializers.IntegerField(source="avatar_hue", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
     password = serializers.CharField(source="plain_password", read_only=True)
+    salary = serializers.IntegerField(default=0)
     class Meta:
         model = Employee
-        fields = ["id", "companyId", "userId", "employeeCode", "firstName", "lastName", "email", "phone", "departmentId", "jobTitle", "managerId", "joiningDate", "status", "avatarHue", "password"]
+        fields = ["id", "companyId", "userId", "employeeCode", "firstName", "lastName", "email", "phone", "departmentId", "jobTitle", "managerId", "joiningDate", "status", "avatarHue", "password", "salary"]
+
+class HolidaySerializer(serializers.ModelSerializer):
+    companyId = serializers.IntegerField(source="company_id", read_only=True)
+    class Meta:
+        model = Holiday
+        fields = ["id", "companyId", "name", "date"]
 
 class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:

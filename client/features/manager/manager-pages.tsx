@@ -14,15 +14,19 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useCompanyData, useDemo, leaveLabel } from "@/features/auth/demo-context";
 import { AccountSettingsForm } from "@/features/auth/account-settings-form";
 import { PasswordChangeForm } from "@/features/auth/password-change-form";
-import { formatDate, formatMinutes, formatTime, relativeTime, todayISO } from "@/lib/dates";
+import { addMonths, calculateMonthStats, formatDate, formatMinutes, formatSalary, formatTime, relativeTime, todayISO } from "@/lib/dates";
 import { fullName } from "@/lib/names";
-import type { Announcement, AttendanceRecord, Department, Employee, LeaveRequest } from "@/types";
+import type { Announcement, AttendanceRecord, Department, Employee, Holiday, LeaveRequest } from "@/types";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import {
   Activity,
   ArrowLeft,
   Building2,
+  Calendar,
+  CalendarCheck,
+  CalendarDays,
+  CalendarX2,
   Copy,
   Eye,
   EyeOff,
@@ -30,7 +34,9 @@ import {
   ClipboardList,
   Clock3,
   FileText,
+  IndianRupee,
   Megaphone,
+  PartyPopper,
   Pencil,
   Plus,
   Trash2,
@@ -50,23 +56,74 @@ function employeeFromSlug(employees: Employee[], slug: string) {
 
 export function ManagerEmployeeDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { employees, departments, attendance } = useCompanyData();
+  const { updateEmployeeSalary } = useDemo();
+  const { employees, departments, attendance, leaveRequests, holidays } = useCompanyData();
   const employee = employeeFromSlug(employees, slug);
+
+  const now = new Date();
+  const [cursor, setCursor] = useState({ year: now.getFullYear(), monthIndex: now.getMonth() });
+  const [editingSalary, setEditingSalary] = useState(false);
+  const [salaryInput, setSalaryInput] = useState(String(employee?.salary ?? 0));
+  const [salarySaving, setSalarySaving] = useState(false);
+  const [salaryError, setSalaryError] = useState<string | null>(null);
+
   if (!employee) {
     return <EmptyManagerPage title="Employee not found" description="This employee may have been removed from the directory." />;
   }
 
   const department = departments.find((item) => item.id === employee.departmentId);
   const records = attendance.filter((record) => record.employeeId === employee.id).sort((a, b) => b.date.localeCompare(a.date));
-  const monthMinutes = records.filter((record) => record.date.startsWith(todayISO().slice(0, 7))).reduce((sum, record) => sum + record.workingMinutes, 0);
+
+  const stats = calculateMonthStats({
+    employeeId: employee.id,
+    companyId: employee.companyId,
+    year: cursor.year,
+    monthIndex: cursor.monthIndex,
+    attendance,
+    leaveRequests,
+    holidays,
+  });
+
+  const monthLabel = new Date(cursor.year, cursor.monthIndex, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  async function handleSaveSalary(e: React.FormEvent) {
+    e.preventDefault();
+    if (!employee) return;
+    setSalaryError(null);
+    const num = Number(salaryInput.replace(/,/g, "").trim());
+    if (isNaN(num) || num < 0) {
+      setSalaryError("Please enter a valid salary amount.");
+      return;
+    }
+    setSalarySaving(true);
+    const err = await updateEmployeeSalary(employee.id, num);
+    setSalarySaving(false);
+    if (err) {
+      setSalaryError(err);
+    } else {
+      setEditingSalary(false);
+    }
+  }
 
   return (
     <div>
-      <PageHeader title={fullName(employee)} description={employee.jobTitle} actions={<Link href="/manager/employees" className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600"><ArrowLeft className="h-4 w-4" />Back to employees</Link>} />
+      <PageHeader
+        title={fullName(employee)}
+        description={employee.jobTitle}
+        actions={
+          <Link href="/manager/employees" className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600">
+            <ArrowLeft className="h-4 w-4" />
+            Back to employees
+          </Link>
+        }
+      />
+
       <div className="min-w-0 space-y-6">
         <Card>
           <CardBody className="flex flex-col items-center text-center">
-
             <div className="flex w-full flex-row items-center gap-4">
               <Avatar employee={employee} size="xl" />
 
@@ -94,7 +151,29 @@ export function ManagerEmployeeDetailPage() {
 
               <Detail label="Joined" value={formatDate(employee.joiningDate)} />
 
-              <div className="sm:col-span-2 min-w-0">
+              <div className="flex items-center justify-between gap-2 sm:block">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Monthly Salary</p>
+                  <p className="text-right text-sm font-semibold text-emerald-700 sm:mt-1 sm:text-left">
+                    {formatSalary(employee.salary)}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-1 h-7 text-xs"
+                  onClick={() => {
+                    setSalaryInput(String(employee.salary || 0));
+                    setSalaryError(null);
+                    setEditingSalary(true);
+                  }}
+                >
+                  <Pencil className="mr-1 h-3 w-3" />
+                  Update salary
+                </Button>
+              </div>
+
+              <div className="min-w-0">
                 <PasswordDetail
                   password={
                     employee.password ||
@@ -107,13 +186,134 @@ export function ManagerEmployeeDetailPage() {
           </CardBody>
         </Card>
 
-        <div className="space-y-6">
-          <div className="grid min-w-0 gap-4">
-            <StatCard label="Hours this month" value={formatMinutes(monthMinutes)} icon={Clock3} />
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Attendance & leave summary
+              </h3>
+              <p className="text-xs text-slate-500">
+                Performance and attendance statistics for {monthLabel}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, -1))}
+              >
+                Previous month
+              </Button>
+              <span className="text-xs font-semibold text-slate-700 min-w-28 text-center">
+                {monthLabel}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCursor((c) => addMonths(c.year, c.monthIndex, 1))}
+              >
+                Next month
+              </Button>
+            </div>
           </div>
-          <Card><CardHeader title="Recent attendance" /><CardBody className="px-0 py-0"><AttendanceTable records={records.slice(0, 8)} /></CardBody></Card>
+
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label="Monthly salary"
+              value={formatSalary(employee.salary)}
+              hint="Click to edit salary"
+              icon={IndianRupee}
+              tone="green"
+              onClick={() => {
+                setSalaryInput(String(employee.salary || 0));
+                setSalaryError(null);
+                setEditingSalary(true);
+              }}
+            />
+
+            <StatCard
+              label="Attendance days"
+              value={`${stats.attendanceDays} days`}
+              hint="Days present / late this month"
+              icon={CalendarCheck}
+              tone="green"
+            />
+
+            <StatCard
+              label="LOP days"
+              value={`${stats.lopDays} days`}
+              hint="Leave / Loss of Pay (excl. Sundays)"
+              icon={CalendarX2}
+              tone={stats.lopDays > 0 ? "rose" : undefined}
+            />
+
+            <StatCard
+              label="Sundays"
+              value={`${stats.sundaysCount} days`}
+              hint="Weekend off-days this month"
+              icon={Calendar}
+              tone="sky"
+            />
+
+            <StatCard
+              label="Company holidays"
+              value={`${stats.holidaysCount} days`}
+              hint="Official holidays (excl. from LOP)"
+              icon={PartyPopper}
+              tone="amber"
+            />
+
+            <StatCard
+              label="Hours this month"
+              value={formatMinutes(stats.workedMinutes)}
+              hint="Total working hours logged"
+              icon={Clock3}
+            />
+          </div>
+
+          <Card>
+            <CardHeader title="Recent attendance" />
+            <CardBody className="px-0 py-0">
+              <AttendanceTable records={records.slice(0, 10)} />
+            </CardBody>
+          </Card>
         </div>
       </div>
+
+      <Modal
+        open={editingSalary}
+        onClose={() => setEditingSalary(false)}
+        title={`Update salary for ${fullName(employee)}`}
+      >
+        <form onSubmit={handleSaveSalary} className="space-y-4">
+          <Field label="Monthly salary (INR ₹)">
+            <div className="relative flex items-center">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-sm font-semibold text-slate-500">
+                ₹
+              </span>
+              <Input
+                type="number"
+                min="0"
+                step="500"
+                required
+                value={salaryInput}
+                onChange={(e) => setSalaryInput(e.target.value)}
+                placeholder="e.g. 45000"
+                className="pl-8"
+              />
+            </div>
+          </Field>
+          {salaryError && <p className="text-sm text-rose-600">{salaryError}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" type="button" onClick={() => setEditingSalary(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={salarySaving}>
+              {salarySaving ? "Saving..." : "Save salary"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
@@ -185,20 +385,53 @@ export function ManagerReportsPage() {
 }
 
 export function ManagerSettingsPage() {
-  const { company, employees } = useCompanyData();
+  const { addHoliday, deleteHoliday } = useDemo();
+  const { company, employees, holidays } = useCompanyData();
+
+  const [holidayModalOpen, setHolidayModalOpen] = useState(false);
+  const [holidayName, setHolidayName] = useState("");
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidaySaving, setHolidaySaving] = useState(false);
+  const [holidayError, setHolidayError] = useState<string | null>(null);
+  const [deletingHoliday, setDeletingHoliday] = useState<Holiday | null>(null);
+
   if (!company) return null;
   const totalEmployees = employees.filter(
     (employee) => employee.status === "active" && !employee.email.startsWith("owner@"),
   ).length;
 
+  async function handleCreateHoliday(e: React.FormEvent) {
+    e.preventDefault();
+    setHolidayError(null);
+    if (!holidayName.trim()) {
+      setHolidayError("Holiday name is required.");
+      return;
+    }
+    if (!holidayDate) {
+      setHolidayError("Holiday date is required.");
+      return;
+    }
+    setHolidaySaving(true);
+    const err = await addHoliday({ name: holidayName.trim(), date: holidayDate });
+    setHolidaySaving(false);
+    if (err) {
+      setHolidayError(err);
+    } else {
+      setHolidayName("");
+      setHolidayDate("");
+      setHolidayModalOpen(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Organization profile and your personal sign-in credentials."
+        description="Organization profile, company holidays, and your personal credentials."
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {/* <div className="grid gap-6 xl:grid-cols-2"> */}
+      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <Card className="flex flex-col">
           <CardHeader
             title="Company profile"
@@ -228,6 +461,8 @@ export function ManagerSettingsPage() {
             <div className="grid grid-cols-2 gap-5 pt-6">
               <Detail label="Company name" value={company.name} />
               <Detail label="Total employees" value={String(totalEmployees)} />
+              <Detail label="Weekend policy" value="Sunday only (1 day off)" />
+              <Detail label="Company holidays" value={`${holidays.length} specified`} />
             </div>
           </CardBody>
         </Card>
@@ -258,7 +493,139 @@ export function ManagerSettingsPage() {
             </div>
           </CardBody>
         </Card>
+
+        <Card className="flex min-w-0 flex-col xl:col-span-2">
+          <CardHeader
+            title="Company holidays"
+            description="Specify official company holidays (e.g. Christmas). Employees are exempt from work on these days, and they are not counted in Loss of Pay (LOP) leave days."
+            action={
+              <Button
+                size="sm"
+                className="shrink-0 whitespace-nowrap px-2 sm:px-3"
+                onClick={() => setHolidayModalOpen(true)}
+              >
+                <Plus className="mr-1 h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Add holiday</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            }
+          />
+
+          <CardBody className="flex-1">
+            {holidays.length === 0 ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                No company holidays configured yet. Click "Add holiday" to specify one.
+              </div>
+            ) : (
+              <div className="w-full min-w-0">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-max min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="whitespace-nowrap px-4 py-3 text-left">Holiday Name</th>
+                        <th className="whitespace-nowrap px-4 py-3 text-left">Date</th>
+                        <th className="whitespace-nowrap px-4 py-3 text-left">Day</th>
+                        <th className="whitespace-nowrap px-4 py-3 text-left">Impact</th>
+                        <th className="whitespace-nowrap px-4 py-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100">
+                      {holidays
+                        .slice()
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map((holiday) => {
+                          const dateObj = new Date(`${holiday.date}T00:00:00`);
+                          const dayName = dateObj.toLocaleDateString("en-US", {
+                            weekday: "long",
+                          });
+
+                          return (
+                            <tr key={holiday.id} className="hover:bg-slate-50/50">
+                              <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
+                                {holiday.name}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                                {formatDate(holiday.date)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                                {dayName}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-emerald-700">
+                                Full day off · Exempt from LOP
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                  onClick={() => setDeletingHoliday(holiday)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardBody>
+
+        </Card>
       </div>
+
+      <Modal
+        open={holidayModalOpen}
+        onClose={() => setHolidayModalOpen(false)}
+        title="Add company holiday"
+      >
+        <form onSubmit={handleCreateHoliday} className="space-y-4">
+          <Field label="Holiday name">
+            <Input
+              type="text"
+              required
+              placeholder="e.g. Christmas, Diwali, New Year's Day"
+              value={holidayName}
+              onChange={(e) => setHolidayName(e.target.value)}
+            />
+          </Field>
+          <Field label="Holiday date">
+            <Input
+              type="date"
+              required
+              value={holidayDate}
+              onChange={(e) => setHolidayDate(e.target.value)}
+            />
+          </Field>
+          {holidayError && <p className="text-sm text-rose-600">{holidayError}</p>}
+          <p className="text-xs text-slate-500">
+            All company employees receive a paid holiday on this date. It will not be counted in LOP (Loss of Pay) leave calculations.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" type="button" onClick={() => setHolidayModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={holidaySaving}>
+              {holidaySaving ? "Saving..." : "Add holiday"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deletingHoliday)}
+        title="Remove holiday?"
+        message={`Are you sure you want to remove ${deletingHoliday?.name ?? "this holiday"}?`}
+        confirmLabel="Remove"
+        danger
+        onClose={() => setDeletingHoliday(null)}
+        onConfirm={() => {
+          if (deletingHoliday) deleteHoliday(deletingHoliday.id);
+        }}
+      />
     </div>
   );
 }
