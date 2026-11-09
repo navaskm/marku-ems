@@ -150,7 +150,7 @@ export function ManagerEmployeeDetailPage() {
 
               <Detail label="Joined" value={formatDate(employee.joiningDate)} />
 
-              <div className="flex items-center justify-between gap-2 sm:block">
+              <div className="col-span-2 flex w-full items-center justify-between gap-2 sm:col-span-1 sm:block">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-400">Monthly Salary</p>
                   <p className="text-right text-sm font-semibold text-emerald-700 sm:mt-1 sm:text-left">
@@ -435,7 +435,6 @@ export function ManagerSettingsPage() {
         description="Organization profile, company holidays, and your personal credentials."
       />
 
-      {/* <div className="grid gap-6 xl:grid-cols-2"> */}
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <Card className="flex flex-col">
           <CardHeader
@@ -502,7 +501,7 @@ export function ManagerSettingsPage() {
         <Card className="flex min-w-0 flex-col xl:col-span-2">
           <CardHeader
             title="Company holidays"
-            description="Specify official company holidays (e.g. Christmas). Employees are exempt from work on these days, and they are not counted in Loss of Pay (LOP) leave days."
+            description="Specify official company holidays."
             action={
               <Button
                 size="sm"
