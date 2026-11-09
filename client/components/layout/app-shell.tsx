@@ -131,10 +131,15 @@ function AppShellContent({ role, children }: { role: Role; children: ReactNode }
 
       <div className="lg:pl-72">
         <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-brand-soft bg-brand-light/90 px-4 py-3 backdrop-blur">
+
+          <img
+            src="/MarkU-Logo.png"
+            alt={`${company.name} logo`}
+            className="h-9 w-9 rounded-lg object-contain lg:hidden"
+          />
           <div className="flex items-center gap-3">
             <div>
               <p className="text-sm font-medium text-brand-text">{company.name}</p>
-              <p className="text-xs text-muted">Workspace {company.code}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

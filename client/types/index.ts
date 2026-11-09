@@ -168,7 +168,8 @@ export interface AnnouncementInput {
 }
 
 export interface ProfileUpdate {
-  phone: string;
+  email?: string;
+  phone?: string;
 }
 
 export const DATASET_VERSION = 3;

@@ -4,7 +4,7 @@ import { DATASET_VERSION } from "@/types";
 import { eachDate, isWeekend, minutesBetween, nowTime, todayISO, workingDaysBetween } from "@/lib/dates";
 import { createId } from "@/lib/ids";
 import { fullName } from "@/lib/names";
-import { apiCreateEmployee, apiDeleteEmployee, apiLogin, apiLogout, apiUpdateEmployee, apiUpdateEmployeeStatus } from "@/lib/api";
+import { apiCreateEmployee, apiDeleteEmployee, apiLogin, apiLogout, apiUpdateEmployee, apiUpdateEmployeeStatus, apiUpdateProfile } from "@/lib/api";
 import type { LoginResponse } from "@/lib/api";
 import { loadDataset, loadSession, resetDataset, saveDataset, saveSession } from "@/lib/storage";
 import type {
@@ -54,7 +54,7 @@ interface DemoContextValue {
   addAnnouncement: (input: AnnouncementInput) => string | null;
   updateAnnouncement: (id: string, input: AnnouncementInput) => string | null;
   deleteAnnouncement: (id: string) => void;
-  updateProfile: (input: ProfileUpdate) => string | null;
+  updateProfile: (input: ProfileUpdate) => Promise<string | null>;
   updateSettings: (input: Partial<CompanySettings>) => void;
   updateCompanyName: (name: string) => void;
 }
@@ -139,10 +139,16 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         apiLogout();
         return { ok: false as const, error: "This workspace is not available in the current application dataset." };
       }
-      const existingUser = dataset.users.find((item) => item.email.toLowerCase() === email);
-      const existingEmployee = existingUser?.employeeId
-        ? dataset.employees.find((item) => item.id === existingUser.employeeId && item.companyId === company.id)
-        : undefined;
+      const existingEmployee = dataset.employees.find(
+        (item) => item.companyId === company.id && (
+          item.email.toLowerCase() === email ||
+          (authenticated.employee.employeeCode && item.employeeCode === authenticated.employee.employeeCode) ||
+          item.id === `api-employee-${String(authenticated.employee.id)}`
+        ),
+      );
+      const existingUser = existingEmployee
+        ? dataset.users.find((item) => item.employeeId === existingEmployee.id)
+        : dataset.users.find((item) => item.email.toLowerCase() === email);
       const userId = existingUser?.id ?? `api-user-${authenticated.session.userId}`;
       const employeeId = existingEmployee?.id ?? `api-employee-${String(authenticated.employee.id)}`;
       const departmentId = existingEmployee?.departmentId
@@ -175,14 +181,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         };
         setDataset((current) => ({
           ...current,
-          users: [...current.users.filter((item) => item.email.toLowerCase() !== email), user],
-          employees: [...current.employees.filter((item) => item.email.toLowerCase() !== email), employee],
+          users: [...current.users.filter((item) => item.email.toLowerCase() !== email && item.id !== userId), user],
+          employees: [...current.employees.filter((item) => item.email.toLowerCase() !== email && item.id !== employeeId), employee],
         }));
       } else {
         setDataset((current) => ({
           ...current,
-          users: current.users.map((item) => item.id === existingUser?.id ? { ...item, role: authenticated.session.role } : item),
-          employees: current.employees.map((item) => item.email.toLowerCase() === email ? { ...item, password: input.password } : item),
+          users: current.users.map((item) => item.id === existingUser?.id ? { ...item, email: authenticated.session.email, role: authenticated.session.role } : item),
+          employees: current.employees.map((item) => item.id === existingEmployee.id ? { ...item, email: authenticated.session.email, phone: String(authenticated.employee.phone ?? item.phone), password: input.password } : item),
         }));
       }
       persistSession({
@@ -646,18 +652,51 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProfile = useCallback(
-    (input: ProfileUpdate) => {
-      if (!session || !currentEmployeeId) return "Not signed in.";
-      if (!input.phone.trim()) return "Phone number is required.";
+    async (input: ProfileUpdate) => {
+      if (!session) return "Not signed in.";
+      const nextEmail = input.email !== undefined ? input.email.trim().toLowerCase() : undefined;
+      const nextPhone = input.phone !== undefined ? input.phone.trim() : undefined;
+      if (nextEmail !== undefined && !nextEmail) return "Email address is required.";
+      if (nextPhone !== undefined && !nextPhone) return "Phone number is required.";
+
+      let serverResponse: { email: string; phone: string } | null = null;
+      try {
+        serverResponse = await apiUpdateProfile({ email: nextEmail, phone: nextPhone });
+      } catch (error) {
+        return error instanceof Error ? error.message : "Failed to update profile in database.";
+      }
+
+      const appliedEmail = serverResponse?.email || nextEmail || session.email;
+      const appliedPhone = serverResponse?.phone || nextPhone;
+
       mutate((current) => ({
         ...current,
-        employees: current.employees.map((employee) =>
-          employee.id === currentEmployeeId ? { ...employee, phone: input.phone.trim() } : employee,
+        users: current.users.map((user) =>
+          user.id === session.userId || user.email.toLowerCase() === session.email.toLowerCase()
+            ? { ...user, email: appliedEmail }
+            : user,
         ),
-      }), "Profile updated.");
+        employees: current.employees.map((employee) =>
+          employee.id === currentEmployeeId || employee.userId === session.userId || employee.email.toLowerCase() === session.email.toLowerCase()
+            ? {
+                ...employee,
+                email: appliedEmail,
+                ...(appliedPhone ? { phone: appliedPhone } : {}),
+              }
+            : employee,
+        ),
+      }), "Profile updated successfully.");
+
+      if (appliedEmail && appliedEmail !== session.email) {
+        persistSession({
+          ...session,
+          email: appliedEmail,
+        });
+      }
+
       return null;
     },
-    [currentEmployeeId, mutate, session],
+    [currentEmployeeId, mutate, persistSession, session],
   );
 
   const updateSettings = useCallback(
@@ -779,7 +818,11 @@ export function useCompanyData() {
     const settings = dataset.settings.find((item) => item.companyId === session.companyId) ?? null;
     const currentUser = dataset.users.find((item) => item.id === session.userId) ?? null;
     const employees = dataset.employees.filter((item) => item.companyId === session.companyId);
-    const currentEmployee = employees.find((item) => item.id === currentUser?.employeeId) ?? null;
+    const currentEmployee =
+      employees.find((item) => item.id === currentUser?.employeeId) ??
+      employees.find((item) => item.userId === session.userId) ??
+      employees.find((item) => item.email.toLowerCase() === session.email.toLowerCase()) ??
+      null;
 
     return {
       company,

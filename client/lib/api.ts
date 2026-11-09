@@ -46,6 +46,16 @@ export async function apiChangePassword(oldPassword: string, newPassword: string
   return result;
 }
 
+export async function apiUpdateProfile(input: { email?: string; phone?: string }) {
+  return request<{ detail: string; email: string; phone: string; employee: Record<string, unknown> }>(
+    "/auth/profile/",
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export function apiLogout() { if (typeof window !== "undefined") window.localStorage.removeItem("workline.apiToken"); }
 
 function normalizeEmployee(employee: Record<string, unknown>): Employee {

@@ -108,7 +108,7 @@ export function LoginForm() {
 
             <form className="space-y-3 sm:space-y-4" onSubmit={submit}>
               <Field label="Work email" error={fieldErrors.email}>
-                <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.demo" className="h-12 rounded-xl px-4" />
+                <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="john.doe@example.com" className="h-12 rounded-xl px-4" />
               </Field>
               <Field label="Phone number" error={fieldErrors.phone}>
                 <div className="relative flex items-center">
@@ -127,7 +127,7 @@ export function LoginForm() {
                       }
                       setPhone(val);
                     }}
-                    placeholder="98765 43210"
+                    placeholder="Enter phone number"
                     maxLength={11}
                     className="h-12 rounded-xl pl-16 pr-4"
                   />

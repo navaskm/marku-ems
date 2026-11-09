@@ -12,6 +12,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog, Modal } from "@/components/ui/modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useCompanyData, useDemo, leaveLabel } from "@/features/auth/demo-context";
+import { AccountSettingsForm } from "@/features/auth/account-settings-form";
 import { PasswordChangeForm } from "@/features/auth/password-change-form";
 import { formatDate, formatMinutes, formatTime, relativeTime, todayISO } from "@/lib/dates";
 import { fullName } from "@/lib/names";
@@ -191,48 +192,73 @@ export function ManagerSettingsPage() {
   ).length;
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
-      <Card className="flex flex-1 flex-col md:max-w-2xl">
-        <CardHeader title="Company profile" />
+    <div className="space-y-6">
+      <PageHeader
+        title="Settings"
+        description="Organization profile and your personal sign-in credentials."
+      />
 
-        <CardBody className="flex-1">
-          <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="flex flex-col">
+          <CardHeader
+            title="Company profile"
+            description="Organization profile and company details"
+          />
 
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
-              <Image
-                src="/MarkU-Logo.png"
-                alt="MarkU logo"
-                fill
-                className="object-contain p-2"
-                sizes="64px"
-              />
+          <CardBody className="flex-1">
+            <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                <Image
+                  src="/MarkU-Logo.png"
+                  alt="MarkU logo"
+                  fill
+                  className="object-contain p-2"
+                  sizes="64px"
+                />
+              </div>
+
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{company.name}</p>
+                <p className="text-sm text-slate-500">
+                  Organization profile and company details
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p className="text-lg font-semibold text-slate-900">{company.name}</p>
-              <p className="text-sm text-slate-500">
-                Organization profile and company details
-              </p>
+            <div className="grid grid-cols-2 gap-5 pt-6">
+              <Detail label="Company name" value={company.name} />
+              <Detail label="Total employees" value={String(totalEmployees)} />
             </div>
-          </div>
+          </CardBody>
+        </Card>
 
-          <div className="grid grid-cols-2 gap-5 pt-6">
-            <Detail label="Company name" value={company.name} />
-            <Detail label="Total employees" value={String(totalEmployees)} />
-          </div>
-        </CardBody>
-      </Card>
+        <Card className="flex flex-col">
+          <CardHeader
+            title="Account credentials"
+            description="Manage your email, phone number, and password."
+          />
 
-      <Card className="flex flex-1 flex-col md:max-w-2xl">
-        <CardHeader
-          title="Password"
-          description="Change your own sign-in password."
-        />
+          <CardBody className="flex-1 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Sign-in details (Email & Phone)</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Update your email address or phone number. These will be required on your next login.
+                </p>
+              </div>
+              <AccountSettingsForm />
+            </div>
 
-        <CardBody className="flex-1">
-          <PasswordChangeForm />
-        </CardBody>
-      </Card>
+            <div className="space-y-4 border-t border-slate-100 pt-5">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Password</h3>
+                <p className="mt-1 text-sm text-slate-500">Change your password for this account.</p>
+              </div>
+              <PasswordChangeForm />
+            </div>
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }

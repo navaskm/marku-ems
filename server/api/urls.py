@@ -6,6 +6,7 @@ from .views import (
     EmployeePasswordInviteView,
     EmployeeViewSet,
     PasswordChangeView,
+    ProfileView,
     login,
     set_password_from_invite,
 )
@@ -18,6 +19,7 @@ urlpatterns = [
     path("auth/login/", login),
     path("auth/password/setup/", set_password_from_invite),
     path("auth/password/change/", PasswordChangeView.as_view()),
+    path("auth/profile/", ProfileView.as_view()),
     path("employees/<int:pk>/password-setup/", EmployeePasswordInviteView.as_view()),
     path("", include(router.urls)),
 ]

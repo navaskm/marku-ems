@@ -170,9 +170,75 @@ class PasswordChangeView(APIView):
         with transaction.atomic():
             user.set_password(new_password)
             user.save(update_fields=["password"])
+            if hasattr(user, "employee_profile"):
+                user.employee_profile.plain_password = new_password
+                user.employee_profile.save(update_fields=["plain_password"])
             Token.objects.filter(user=user).delete()
             token = Token.objects.create(user=user)
         return Response({"token": token.key})
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        emp = getattr(user, "employee_profile", None)
+        return Response({
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "phone": emp.phone if emp else "",
+            "firstName": emp.first_name if emp else user.first_name,
+            "lastName": emp.last_name if emp else user.last_name,
+            "role": emp.role if emp else "employee",
+        })
+
+    def patch(self, request):
+        user = request.user
+        emp = getattr(user, "employee_profile", None)
+        data = request.data
+
+        new_email = str(data.get("email", "")).strip().lower() if "email" in data else None
+        new_phone = str(data.get("phone", "")).strip() if "phone" in data else None
+
+        errors = {}
+        if new_email is not None:
+            if not new_email:
+                errors["email"] = ["Email address is required."]
+            else:
+                try:
+                    validate_email(new_email)
+                except DjangoValidationError:
+                    errors["email"] = ["Enter a valid email address."]
+                else:
+                    if User.objects.filter(Q(username__iexact=new_email) | Q(email__iexact=new_email)).exclude(pk=user.pk).exists():
+                        errors["email"] = ["An account with this email address already exists."]
+
+        if new_phone is not None and not new_phone:
+            errors["phone"] = ["Phone number is required."]
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if new_email is not None:
+                user.email = new_email
+                user.username = new_email
+                user.save(update_fields=["email", "username"])
+            if new_phone is not None and emp:
+                emp.phone = new_phone
+                emp.save(update_fields=["phone"])
+
+        return Response({
+            "detail": "Profile updated successfully.",
+            "email": user.email,
+            "phone": emp.phone if emp else "",
+            "employee": EmployeeSerializer(emp).data if emp else None,
+        })
+
+    def put(self, request):
+        return self.patch(request)
 
 class CompanyViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CompanySerializer
